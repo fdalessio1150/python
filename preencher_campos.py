@@ -1,47 +1,65 @@
 import re
+import sys
+import os
+from string import Template
 
-data = open("C:\\Users\\Felipe\\Desktop\\dados.txt", encoding="utf8", mode="r+")
-format = open("C:\\Users\\Felipe\\Desktop\\formato.txt", encoding="utf8", mode="r+")
-newFile = open("C:\\Users\\Felipe\\Desktop\\result.txt", encoding="utf8", mode="w+")
-columns = data.readline().replace(' ', '').replace("\n", "").split(',')
+path = "C:\\Users\Felipe\\Desktop\\"
+dataFileName = "dados.txt"
+formatFileName = "formato.txt"
+newFileName = "result.txt"
+dataFileDelimiter = ','
 
-dataSize = len(data.readlines())
-formatSize = len(format.readlines())
-columnsSize = len(columns)
-delimiter = ',\n'
+def main():
+    formatFile = readFormatFile()
+    (lines, header) = readDataFile()
+    newFile = createNewFile()
+    
+    combine(lines, header, formatFile, newFile)
 
-combs = []
-a = []
+def createNewFile():
+    if os.path.exists(path):
+        return open(path + newFileName, encoding="utf-8", mode="w+")
+    else:
+        print("ERROR - directory doesn't exists.")  
 
-data.seek(0)
-format.seek(0)
+def readDataFile():
+    if os.path.exists(path):
+        try:
+            dataFile = open(path + dataFileName, encoding="utf-8", mode="r")
+            formatFile = open(path + formatFileName, encoding="utf-8", mode="r")
+            
+            lines = [line.strip() for line in dataFile.readlines()]
+            header = lines[0]
+            lines = lines[1:]
+            
+            return lines, header
+        except IOError:
+            print("ERROR - data file may not exists.")            
+    else:
+        print("ERROR - directory doesn't exists.")
 
-for x in range(dataSize):
-    format.seek(0)
-    for count, line in enumerate(format):
-        if count == (formatSize-1) and dataSize > 1 and x != dataSize - 1:
-             a.append(line + delimiter)
-        elif count == 0 or count == formatSize-1:
-            a.append(line)
-        elif x == (dataSize-1) and count == (formatSize-1) and dataSize > 1:
-            a.append(line)           
-        else:
-            a.append(str(line))
-print("Primeiro loop - OK")
+def readFormatFile():
+    if os.path.exists(path):
+        try:
+            formatFile = open(path + formatFileName, encoding="utf-8", mode="r")
+            return Template(formatFile.read())
+        except IOError:
+            print("ERROR - format file may not exists.") 
 
-for dataLine in data.readlines()[1:]:
-    data = dataLine.replace(', ',',').replace('\n', '').split(',')
-    for x in range(len(columns)):
-        combs.append((columns[x], data[x]))
-print("Segundo loop - OK")
+def combine(lines, header, formatFile, newFile):
+    header = header.strip().split(dataFileDelimiter)
+    
+    for line in lines:
+        data = line.split(',')
+        combs = []
+        for x in range(len(header)):
+            combs.append((header[x], data[x]))
+            if x == (len(header) - 1):
+                subDictionary = {k:v for k, v in combs}
+                writeFile(formatFile, subDictionary, newFile)
 
-for k, v in combs:
-    for i,line in enumerate(a):
-        if re.search(k, line):
-            a[i] = line.replace(k, v)
-            break            
-print("Terceiro loop - OK")
+def writeFile(formatFile, subDictionary, newFile):
+    newFile.write(formatFile.substitute(subDictionary))
 
-for v in a:
-    print(v)
-    newFile.write(v)
+if __name__ == "__main__":
+    main()
